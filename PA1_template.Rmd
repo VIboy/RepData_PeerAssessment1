@@ -5,7 +5,7 @@ date: "15 November 2015"
 output: html_document
 ---
 
-This is an R Markdown document and a report on the daily activity pattern based on data collected from a personal monitoring device.  The data consists of 2 months of data collected from October to November 2012 and include the number of steps taken in 5-minute intervals each day. 
+This is an R Markdown document/report on the daily activity pattern based on data collected from a personal monitoring device.  The data consists of 2 months of data collected from October to November 2012 and include the number of steps taken in 5-minute intervals each day. 
 
 # Q.1 Total number of steps taken per day.
 
