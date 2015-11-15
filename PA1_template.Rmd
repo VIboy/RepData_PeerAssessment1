@@ -1,25 +1,111 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+author: "VIboy"
+date: "15 November 2015"
+output: html_document
 ---
 
+This is an R Markdown document and a report on the daily activity pattern based on data collected from a personal monitoring device.  The data consists of 2 months of data collected from October to November 2012 and include the number of steps taken in 5-minute intervals each day. 
 
-## Loading and preprocessing the data
+# Q.1 Total number of steps taken per day.
 
+```{r}
+library(plyr)
+data <- read.csv("activity.csv")
+str(data) # Structure of original data
+head(data)
+data$date <- as.Date(data$date)
+data <- na.omit(data)
+str(data) # Number of obs after removing NAs.
 
+# Number of missing NAs = 17568-15264 = 2304
 
-## What is mean total number of steps taken per day?
+summary(data$steps)
 
+data1 <- ddply(data, c("date"), summarise,
+                  sum = sum (steps)) # split, apply and combine
 
+summary(data1$sum) # mean and median value are shown here
+head(data1)
+str(data1)
 
-## What is the average daily activity pattern?
+hist(data1$sum, breaks=10, col="green", xlab="Total number of steps/day", main="Total number of steps per day")
+```
 
+From the summary(data1$sum), we can see that the mean is 10770 and median is 10760 for the total number of steps per day.
 
+# Q.2 Average daily activity pattern and time series plot.
 
-## Imputing missing values
+The code for the second part of this assignment on average daily activity pattern for the 5-minute interval:
 
+```{r}
+intdata<- ddply(data, c("interval"), summarise,
+                mean = mean(steps))
+intdata[289,1:2]<-c(0000,0)
+intdata$interval<-format( seq.POSIXt(as.POSIXct(Sys.Date()), as.POSIXct(Sys.Date()+1), by = "5 min"),
+        "%H%M", tz="GMT")
+str(intdata)
+intdata$interval<-strptime(intdata$interval, "%H%M")
 
+plot(intdata$interval,intdata$mean, type="l",xlab="time in hr/mins", ylab="Ave number of steps",col="blue")
+summary(intdata$mean) # Check the max mean value = 206.  
+intdata[which(intdata$mean >= 206),] # Gives the time interval ie. 835 or 8.35 am for max value.
+```
+Therefore, the 5-minute time interval with the max number of steps is 0835-0840.
 
-## Are there differences in activity patterns between weekdays and weekends?
+# Q3: Imputation: Replace NA with mean values
+
+Since there are 2304 NA values compared to the total of more than 17000 observations, the best strategy is to replace missing (NA) values with the mean value so as not to skew the overall result of the activity study.
+
+```{r}
+data <- read.csv("activity.csv") # Read in original data with NAs
+str(data)
+data$steps[is.na(data$steps)] <- mean(data$steps, na.rm=TRUE) 
+```
+
+From the above data before and after removing the NAs, the total number of missing values = 17568-15264 = 2304
+ 
+```{r}
+data$date <- as.Date(data$date)
+data1 <- ddply(data, c("date"), summarise,
+               sum = sum (steps)) # split, apply and combine
+hist(data1$sum, breaks=10, col="green", xlab="Total number of steps/day", main="Total number of steps per day")
+summary(data1$sum) #Not much change in mean and median
+```
+There is no change in the mean value (10770) when we replace the missing NAs with the mean value. There is also little change in the median value from 10760 to 10770. Therefore, in this case, there is no impact of imputing missing data on the estimates of the total daily number of steps.
+
+#Q4: Activity Patterns -"weekday" and "weekend".
+```{r}   
+data$date<-weekdays(data$date,abbreviate=TRUE)
+str(data)
+
+library(data.table)
+data1<-data[which(data$date == "Sat" | data$date== "Sun"),] # It works!!
+data2<-data[which(data$date == "Mon" | data$date=="Tue" | data$date=="Wed" |data$date=="Thu"|data$date=="Fri"),]
+
+names(data1)[2]<-"weekday"
+names(data2)[2]<-"weekday"
+wkdata1<- ddply(data1, c("interval"), summarise,
+               mean = mean(steps))
+wkdata1[289,1:2]<-c(0000,0)
+wkdata1$interval<-format( seq.POSIXt(as.POSIXct(Sys.Date()), as.POSIXct(Sys.Date()+1), by = "5 min"),
+                         "%H%M",tz="GMT") # Has 289
+wkdata1$weekday<-rep("weekend",289) # need to add in variable for weekend
+str(wkdata1)
+
+wkdata2<- ddply(data2, c("interval"), summarise,
+                mean = mean(steps))
+wkdata2[289,1:2]<-c(0000,0)
+wkdata2$interval<-format( seq.POSIXt(as.POSIXct(Sys.Date()), as.POSIXct(Sys.Date()+1), by = "5 min"),
+                          "%H%M",tz="GMT") # Has 289
+wkdata2$weekday<-rep("weekday",289)# Need to add in variable for weekday
+
+wkdata<-rbind(wkdata1,wkdata2)
+str(wkdata) # 578 observations
+
+wkdata$interval<-as.integer(wkdata$interval)
+# Panel plot
+library(ggplot2)
+hwc<-ggplot(wkdata,aes(x=interval,y=mean))+ geom_line() + labs(x ="Interval", y = "Number of steps")
+hwc + facet_wrap(~ weekday, ncol=1)
+```
